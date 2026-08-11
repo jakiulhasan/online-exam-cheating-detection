@@ -28,54 +28,6 @@ const Home = () => {
       <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[140px] pointer-events-none"></div>
       <div className="absolute bottom-1/4 right-0 w-[500px] h-[500px] bg-secondary/5 rounded-full blur-[140px] pointer-events-none"></div>
 
-      {/* ================= 1. NAVBAR ================= */}
-      <div className="navbar bg-base-100/70 backdrop-blur-md border-b border-base-200/60 px-4 lg:px-12 sticky top-0 z-50">
-        <div className="navbar-start">
-          <div className="flex items-center gap-2.5 font-black text-xl md:text-2xl tracking-tighter">
-            <div className="p-2 bg-gradient-to-br from-primary to-secondary text-primary-content rounded-xl shadow-lg">
-              <ShieldAlert className="w-5 h-5" />
-            </div>
-            <span className="bg-gradient-to-r from-primary via-indigo-500 to-secondary bg-clip-text text-transparent">
-              MedhaGuard
-            </span>
-          </div>
-        </div>
-        <div className="navbar-center hidden lg:flex">
-          <ul className="menu menu-horizontal px-1 font-bold gap-2 text-sm opacity-80">
-            <li>
-              <a
-                href="#gateway"
-                className="hover:text-primary transition-all rounded-lg"
-              >
-                Gateway Portal
-              </a>
-            </li>
-            <li>
-              <a
-                href="#features"
-                className="hover:text-primary transition-all rounded-lg"
-              >
-                AI Features
-              </a>
-            </li>
-            <li>
-              <a
-                href="#about"
-                className="hover:text-primary transition-all rounded-lg"
-              >
-                System Spec
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div className="navbar-end">
-          <span className="text-xs font-mono font-bold text-success flex items-center gap-1.5 bg-success/10 px-3 py-1.5 rounded-full border border-success/20">
-            <span className="w-2 h-2 bg-success rounded-full animate-pulse"></span>{" "}
-            Node Core: v2.0
-          </span>
-        </div>
-      </div>
-
       {/* ================= 2. GATEWAY & DYNAMIC LOGIN CONTAINER ================= */}
       <div
         id="gateway"
@@ -408,22 +360,6 @@ const Home = () => {
       </div>
 
       {/* ================= 5. SYSTEM STATUS FOOTER ================= */}
-      <footer className="footer footer-center p-8 bg-base-200 text-base-content border-t border-base-300 font-mono text-xs opacity-70">
-        <div className="flex flex-col sm:flex-row justify-between items-center w-full max-w-7xl mx-auto gap-4">
-          <div>
-            © 2026 MedhaGuard Architecture Ecosystem. All Rights Reserved.
-          </div>
-          <div className="flex gap-4">
-            <span className="badge badge-sm badge-outline">React JS</span>
-            <span className="badge badge-sm badge-outline">
-              Tailwind/DaisyUI
-            </span>
-            <span className="badge badge-sm badge-primary badge-outline">
-              Proctor Portal Core
-            </span>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };
