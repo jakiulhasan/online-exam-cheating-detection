@@ -1,5 +1,5 @@
 import axios from "axios";
-import React, { use, useEffect } from "react";
+import { useContext, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { AuthContext } from "../Context/AuthContext/AuthContext";
 
@@ -8,13 +8,14 @@ const axiosSecure = axios.create({
 });
 
 const useAxiosSecure = () => {
-  const { user, signOutUser } = use(AuthContext);
+  const { user, signOutUser } = useContext(AuthContext);
   const navigate = useNavigate();
 
   useEffect(() => {
     // intercept request
     const reqInterceptor = axiosSecure.interceptors.request.use((config) => {
-      config.headers.Authorization = `Bearer ${user?.accessToken}`;
+      const token = user?.accessToken || user?.stsTokenManager?.accessToken;
+      if (token) config.headers.Authorization = `Bearer ${token}`;
       return config;
     });
 
@@ -24,17 +25,14 @@ const useAxiosSecure = () => {
         return response;
       },
       (error) => {
-        console.log(error);
-
-        const statusCode = error.status;
+        const statusCode = error?.response?.status;
         if (statusCode === 401 || statusCode === 403) {
-          signOutUser().then(() => {
+          signOutUser?.().then(() => {
             navigate("/login");
           });
         }
-
         return Promise.reject(error);
-      }
+      },
     );
 
     return () => {
