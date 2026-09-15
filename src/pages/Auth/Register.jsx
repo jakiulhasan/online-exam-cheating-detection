@@ -1,34 +1,38 @@
-import React, { useContext, useState } from "react";
-import { useNavigate } from "react-router";
+import { useContext, useState } from "react";
+import { Link, useNavigate } from "react-router";
 import { AuthContext } from "../../Context/AuthContext/AuthContext";
 import axiosInstance from "../../Context/Axios/Axios";
 import axios from "axios";
-import { Eye, EyeOff, Upload, User, Mail, Lock } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Upload,
+  User,
+  Mail,
+  Lock,
+  ShieldAlert,
+  AlertCircle,
+} from "lucide-react";
+
+const IMGBB_API_KEY = import.meta.env.VITE_IMGBB_KEY || "";
 
 const Register = () => {
   const { createAccount, updateUserProfile } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  // State Management
   const [role, setRole] = useState("student");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
 
-  // Photo Upload States
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
 
-  // UI States
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  // ImgBB API Key
-  const IMGBB_API_KEY = "05f1a028b1b4b170db41ebd11df77db8";
-
-  // Password Strength Calculator
   const getPasswordStrength = (pass) => {
     let score = 0;
     if (!pass) return { score: 0, text: "", color: "" };
@@ -53,7 +57,6 @@ const Register = () => {
 
   const strength = getPasswordStrength(password);
 
-  // Handle Local Image Preview
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -62,7 +65,6 @@ const Register = () => {
     }
   };
 
-  // Upload Image to ImgBB
   const uploadToImgBB = async (file) => {
     const formData = new FormData();
     formData.append("image", file);
@@ -73,59 +75,49 @@ const Register = () => {
     return response.data.data.url;
   };
 
-  // Handle Registration
   const handleRegister = async (e) => {
     e.preventDefault();
+    setError("");
 
-    // Password Validation
     if (password.length < 6) {
-      alert("Password must be at least 6 characters long.");
+      setError("Password must be at least 6 characters long.");
       return;
     }
 
     setLoading(true);
-
     try {
       let photoURL = "";
 
-      // 1. Upload photo if selected
-      if (imageFile) {
+      // 1. Upload photo if selected (skip gracefully if no imgbb key)
+      if (imageFile && IMGBB_API_KEY) {
         setUploadingImage(true);
         photoURL = await uploadToImgBB(imageFile);
         setUploadingImage(false);
       }
 
-      // 2. Create Firebase Account
-      await createAccount(email, password);
+      // 2. Create Firebase account
+      const cred = await createAccount(email, password);
 
-      // 3. Update User Profile with Name & Photo
+      // 3. Update Firebase profile
       await updateUserProfile({
         displayName: name,
         photoURL: photoURL || null,
       });
 
-      // 4. Save User Info to Backend Database
-      await axiosInstance.post("/users", {
-        name,
-        email,
-        role,
-        photoURL,
+      // 4. Save the completed profile to the backend.
+      const token = await cred.user.getIdToken();
+      await axiosInstance.post(
+        "/users",
+        { name, email, role, photoURL, profileComplete: true },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      // 5. Redirect by role (NOTE: password is never stored anywhere)
+      navigate(role === "teacher" ? "/profile/teacher" : "/profile/student", {
+        replace: true,
       });
-
-      // 5. Save credentials if Remember Me is checked (Login Form auto-fill এর জন্য)
-      if (rememberMe) {
-        localStorage.setItem("medha_saved_email", email);
-        localStorage.setItem("medha_saved_password", password);
-      } else {
-        localStorage.removeItem("medha_saved_email");
-        localStorage.removeItem("medha_saved_password");
-      }
-
-      // 6. Navigate based on Role
-      navigate(role === "teacher" ? "/profile/teacher" : "/profile/student");
     } catch (err) {
-      console.error(err);
-      alert(err.message || "Registration failed. Please try again.");
+      setError(friendlyError(err));
     } finally {
       setLoading(false);
       setUploadingImage(false);
@@ -133,20 +125,41 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-base-200 flex items-center justify-center p-4">
-      <div className="card w-full max-w-lg bg-base-100 shadow-2xl border border-base-300 rounded-3xl p-8">
-        {/* Header */}
+    <div className="min-h-screen bg-[#f6f8fc] relative overflow-hidden flex items-center justify-center p-4 sm:p-6">
+      <div className="absolute top-1/4 right-1/4 w-[400px] h-[400px] bg-secondary/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-primary/10 rounded-full blur-[110px] pointer-events-none" />
+
+      <Link
+        to="/"
+        className="absolute top-6 left-6 flex items-center gap-2 font-black text-lg tracking-tighter z-20"
+      >
+        <div className="p-1.5 bg-gradient-to-br from-primary to-secondary text-primary-content rounded-lg shadow-lg">
+          <ShieldAlert className="w-4 h-4" />
+        </div>
+        <span className="bg-gradient-to-r from-primary via-indigo-500 to-secondary bg-clip-text text-transparent">
+          MedhaGuard
+        </span>
+      </Link>
+
+      <div className="card w-full max-w-lg bg-white/90 shadow-[0_24px_70px_rgba(20,33,61,0.1)] border border-slate-200 rounded-[26px] p-6 sm:p-8 relative z-10 backdrop-blur-md">
         <div className="text-center mb-6">
           <h2 className="text-3xl font-extrabold text-base-content">
             Create an Account
           </h2>
           <p className="text-sm text-base-content/60 mt-1">
-            Join us today! Please fill in your details.
+            Join MedhaGuard today! Please fill in your details.
           </p>
         </div>
 
+        {error && (
+          <div className="alert alert-error text-sm py-2 rounded-xl mb-4">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
         <form onSubmit={handleRegister} className="space-y-4">
-          {/* Profile Photo Upload Section */}
+          {/* Profile Photo */}
           <div className="flex flex-col items-center gap-3">
             <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-primary/30 flex items-center justify-center bg-base-200 group">
               {imagePreview ? (
@@ -174,11 +187,11 @@ const Register = () => {
               className="hidden"
             />
             <span className="text-xs text-base-content/60">
-              {imageFile ? imageFile.name : "Choose profile picture"}
+              {imageFile ? imageFile.name : "Choose profile picture (optional)"}
             </span>
           </div>
 
-          {/* Full Name Field */}
+          {/* Full Name */}
           <div className="form-control">
             <label className="label text-sm font-medium">Full Name</label>
             <div className="relative">
@@ -194,7 +207,7 @@ const Register = () => {
             </div>
           </div>
 
-          {/* Email Field */}
+          {/* Email */}
           <div className="form-control">
             <label className="label text-sm font-medium">Email Address</label>
             <div className="relative">
@@ -210,7 +223,7 @@ const Register = () => {
             </div>
           </div>
 
-          {/* Password Field */}
+          {/* Password */}
           <div className="form-control">
             <label className="label text-sm font-medium">Password</label>
             <div className="relative">
@@ -236,7 +249,6 @@ const Register = () => {
               </button>
             </div>
 
-            {/* Password Strength Indicator */}
             {password && (
               <div className="mt-2 space-y-1">
                 <div className="flex justify-between items-center text-xs">
@@ -247,13 +259,13 @@ const Register = () => {
                   <div
                     className={`h-full transition-all duration-300 ${strength.color}`}
                     style={{ width: `${strength.score}%` }}
-                  ></div>
+                  />
                 </div>
               </div>
             )}
           </div>
 
-          {/* Role Selection */}
+          {/* Role */}
           <div className="form-control">
             <label className="label text-sm font-medium">Select Role</label>
             <div className="grid grid-cols-2 gap-3">
@@ -261,7 +273,7 @@ const Register = () => {
                 className={`flex items-center justify-center gap-2 p-3 border rounded-xl cursor-pointer transition-all ${
                   role === "student"
                     ? "border-primary bg-primary/10 font-semibold text-primary"
-                    : "border-base-300 hover:border-base-400"
+                    : "border-base-300 hover:border-base-content/30"
                 }`}
               >
                 <input
@@ -278,7 +290,7 @@ const Register = () => {
                 className={`flex items-center justify-center gap-2 p-3 border rounded-xl cursor-pointer transition-all ${
                   role === "teacher"
                     ? "border-primary bg-primary/10 font-semibold text-primary"
-                    : "border-base-300 hover:border-base-400"
+                    : "border-base-300 hover:border-base-content/30"
                 }`}
               >
                 <input
@@ -293,27 +305,13 @@ const Register = () => {
             </div>
           </div>
 
-          {/* Remember Me Checkbox */}
-          <div className="flex items-center justify-between mt-2">
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-base-content/70">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="checkbox checkbox-sm checkbox-primary rounded"
-              />
-              Remember me (Save credentials for login)
-            </label>
-          </div>
-
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
-            className="btn btn-primary w-full rounded-xl mt-4 text-white font-medium"
+            className="btn btn-primary w-full rounded-xl mt-2 text-white font-medium"
           >
             {loading ? (
-              <span className="loading loading-spinner loading-sm"></span>
+              <span className="loading loading-spinner loading-sm" />
             ) : uploadingImage ? (
               "Uploading Image..."
             ) : (
@@ -322,19 +320,31 @@ const Register = () => {
           </button>
         </form>
 
-        {/* Footer Link */}
         <div className="text-center mt-6 text-sm text-base-content/60">
           Already have an account?{" "}
-          <button
-            onClick={() => navigate("/")}
+          <Link
+            to="/login"
             className="text-primary font-semibold hover:underline"
           >
             Sign In
-          </button>
+          </Link>
         </div>
       </div>
     </div>
   );
 };
+
+function friendlyError(err) {
+  const code = err?.code || "";
+  if (code.includes("email-already-in-use"))
+    return "An account with this email already exists.";
+  if (code.includes("invalid-email")) return "Please enter a valid email.";
+  if (code.includes("weak-password"))
+    return "Password is too weak (min 6 characters).";
+  if (code.includes("network")) return "Network error. Check your connection.";
+  return (
+    err?.message?.replace("Firebase:", "").trim() || "Registration failed."
+  );
+}
 
 export default Register;

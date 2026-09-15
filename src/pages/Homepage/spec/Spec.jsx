@@ -1,121 +1,115 @@
-import React from "react";
 import {
-  ShieldAlert,
-  Users,
-  GraduationCap,
-  ArrowRight,
-  LogIn,
-  KeyRound,
-  Mail,
-  Eye,
-  MonitorSmartphone,
-  Ban,
-  Radio,
-  Info,
+  ArrowDown,
+  Database,
   Network,
   Server,
-  Fingerprint,
+  ShieldCheck,
 } from "lucide-react";
-const Spec = () => {
-  return (
-    <div>
-      {" "}
-      {/* ================= 4. ABOUT & SYSTEM ARCHITECTURE SECTION ================= */}
-      <div
-        id="about"
-        className="py-24 container mx-auto px-4 lg:px-12 max-w-7xl relative z-10"
-      >
-        <div className="card bg-neutral text-neutral-content shadow-2xl rounded-3xl overflow-hidden border border-neutral-focus">
-          <div className="grid grid-cols-1 lg:grid-cols-12">
-            {/* Tech details */}
-            <div className="lg:col-span-5 p-8 lg:p-14 flex flex-col justify-center space-y-5">
-              <div className="badge badge-accent font-mono text-xs tracking-wider font-bold gap-1.5 py-2 px-3 uppercase rounded-md bg-accent/15 border-accent/20">
-                <Info className="w-3.5 h-3.5" /> Inside MedhaGuard Core
-              </div>
-              <h2 className="text-3xl md:text-4xl font-black tracking-tighter text-white">
-                How Our MERN Stack Mesh Works
-              </h2>
-              <p className="text-neutral-content/70 text-sm leading-relaxed">
-                MedhaGuard is not just an overlay UI—it is an optimized
-                environment engine. We isolate tasks safely on standard browsers
-                without heavy background executable application downloads.
-              </p>
 
-              <div className="space-y-3.5 pt-2">
-                <div className="flex items-start gap-3.5">
-                  <div className="p-1.5 bg-neutral-focus rounded-lg text-accent mt-0.5">
-                    <Network className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-white">
-                      Client-side WebRTC Mesh
-                    </h4>
-                    <p className="text-xs text-neutral-content/50">
-                      Captures smooth, high-fidelity media pipelines directly
-                      inside React contexts.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3.5">
-                  <div className="p-1.5 bg-neutral-focus rounded-lg text-accent mt-0.5">
-                    <Server className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-white">
-                      Node.js Threat Aggregator
-                    </h4>
-                    <p className="text-xs text-neutral-content/50">
-                      Filters logs using structured Express pipelines before
-                      writing violations into MongoDB datasets.
-                    </p>
-                  </div>
-                </div>
-              </div>
+const Spec = () => (
+  <section id="about" className="section-space">
+    <div className="site-container grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
+      <div>
+        <span className="eyebrow">
+          <ShieldCheck className="h-4 w-4" /> Designed for trust
+        </span>
+        <h2 className="mt-3 max-w-md text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+          One clean signal path from browser to teacher.
+        </h2>
+        <p className="mt-5 max-w-md text-sm leading-7 text-slate-500">
+          MedhaGuard combines client-side checks, authenticated APIs, and
+          MongoDB records into a workflow that is easy to understand and easy to
+          review.
+        </p>
+        <div className="mt-7 space-y-4">
+          <div className="flex gap-3">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-blue-100 text-blue-600">
+              <Network className="h-4 w-4" />
             </div>
-
-            {/* Visual Architecture Grid Mockup */}
-            <div className="lg:col-span-7 bg-base-300/30 p-8 lg:p-12 border-t lg:border-t-0 lg:border-l border-neutral-focus flex items-center justify-center">
-              <div className="w-full bg-neutral/40 border border-neutral-focus rounded-2xl p-6 font-mono text-xs text-neutral-content/90 space-y-4">
-                <div className="text-accent">// PLATFORM PIPELINE MAPPING</div>
-
-                {/* Step 1 */}
-                <div className="p-3 bg-neutral-focus/60 rounded-xl border border-neutral-focus flex justify-between items-center">
-                  <span>1. Student React UI</span>
-                  <span className="badge badge-sm badge-primary border-0 font-bold font-mono">
-                    Webcam Capture
-                  </span>
-                </div>
-                {/* Arrow */}
-                <div className="text-center opacity-30 text-white">
-                  ↓ Real-time Client-Side Inference
-                </div>
-
-                {/* Step 2 */}
-                <div className="p-3 bg-neutral-focus/60 rounded-xl border border-neutral-focus flex justify-between items-center">
-                  <span>2. Local TensorFlow Models</span>
-                  <span className="badge badge-sm badge-secondary border-0 font-bold font-mono">
-                    Gaze Matrix Logged
-                  </span>
-                </div>
-                {/* Arrow */}
-                <div className="text-center opacity-30 text-white">
-                  ↓ Secured Socket.io Frame Pipes
-                </div>
-
-                {/* Step 3 */}
-                <div className="p-3 bg-neutral-focus/60 rounded-xl border border-neutral-focus flex justify-between items-center">
-                  <span>3. Express Backend & MongoDB</span>
-                  <span className="badge badge-sm badge-accent border-0 font-bold font-mono">
-                    Teacher Screen Sync
-                  </span>
-                </div>
-              </div>
+            <div>
+              <h3 className="text-sm font-black text-slate-900">
+                Signals stay contextual
+              </h3>
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                Every event is tied to a room, student, and timestamp.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-cyan-100 text-cyan-600">
+              <Server className="h-4 w-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-slate-900">
+                Teachers see the useful layer
+              </h3>
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                No raw noise, just actionable integrity information.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="surface overflow-hidden bg-slate-950 p-5 text-white sm:p-7">
+        <div className="flex items-center justify-between border-b border-white/10 pb-4">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-300">
+              System map
+            </p>
+            <h3 className="mt-1 text-lg font-black">Integrity pipeline</h3>
+          </div>
+          <Database className="h-5 w-5 text-slate-500" />
+        </div>
+        <div className="mt-6 space-y-3">
+          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-blue-500/20 text-blue-300">
+              01
+            </span>
+            <div>
+              <p className="text-sm font-bold">Student browser</p>
+              <p className="text-xs text-slate-400">
+                Camera, fullscreen, and activity checks
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 px-5 text-slate-500">
+            <ArrowDown className="h-4 w-4" />
+            <span className="text-[10px] font-bold uppercase tracking-widest">
+              authenticated event stream
+            </span>
+          </div>
+          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-cyan-500/20 text-cyan-300">
+              02
+            </span>
+            <div>
+              <p className="text-sm font-bold">MedhaGuard API</p>
+              <p className="text-xs text-slate-400">
+                Role-aware room and violation routes
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 px-5 text-slate-500">
+            <ArrowDown className="h-4 w-4" />
+            <span className="text-[10px] font-bold uppercase tracking-widest">
+              stored with room context
+            </span>
+          </div>
+          <div className="flex items-center gap-3 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-500/20 text-emerald-300">
+              03
+            </span>
+            <div>
+              <p className="text-sm font-bold">Teacher workspace</p>
+              <p className="text-xs text-slate-400">
+                Review the story behind every flag
+              </p>
             </div>
           </div>
         </div>
       </div>
     </div>
-  );
-};
+  </section>
+);
 
 export default Spec;

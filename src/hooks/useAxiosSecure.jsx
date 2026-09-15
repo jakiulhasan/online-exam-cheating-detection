@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 import { AuthContext } from "../Context/AuthContext/AuthContext";
 
 const axiosSecure = axios.create({
-  baseURL: "http://localhost:3000",
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000",
 });
 
 const useAxiosSecure = () => {
@@ -12,12 +12,23 @@ const useAxiosSecure = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // intercept request
-    const reqInterceptor = axiosSecure.interceptors.request.use((config) => {
-      const token = user?.accessToken || user?.stsTokenManager?.accessToken;
-      if (token) config.headers.Authorization = `Bearer ${token}`;
-      return config;
-    });
+    // intercept request — attach a fresh Firebase ID token
+    const reqInterceptor = axiosSecure.interceptors.request.use(
+      async (config) => {
+        if (user?.getIdToken) {
+          try {
+            const token = await user.getIdToken();
+            if (token) config.headers.Authorization = `Bearer ${token}`;
+          } catch {
+            // fall back to any cached token on the user object
+            const cached =
+              user?.accessToken || user?.stsTokenManager?.accessToken;
+            if (cached) config.headers.Authorization = `Bearer ${cached}`;
+          }
+        }
+        return config;
+      },
+    );
 
     // interceptor response
     const resInterceptor = axiosSecure.interceptors.response.use(

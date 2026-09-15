@@ -1,102 +1,72 @@
-import React from "react";
-import {
-  ShieldAlert,
-  Users,
-  GraduationCap,
-  ArrowRight,
-  LogIn,
-  KeyRound,
-  Mail,
-  Eye,
-  MonitorSmartphone,
-  Ban,
-  Radio,
-  Info,
-  Network,
-  Server,
-  Fingerprint,
-} from "lucide-react";
-const Feature = () => {
-  return (
-    <div>
-      {" "}
-      {/* ================= 3. CORE PROCTORING FEATURES ================= */}
-      <div
-        id="features"
-        className="py-24 bg-base-200/40 border-y border-base-200/60 relative"
-      >
-        <div className="container mx-auto px-4 lg:px-12 max-w-7xl">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-3xl md:text-5xl font-black tracking-tighter mb-4">
-              Anti-Cheat Matrix
-            </h2>
-            <p className="text-sm md:text-base text-base-content/60">
-              MedhaGuard coordinates multiple background parameters to assure
-              absolute systemic validation.
-            </p>
-          </div>
+import { Eye, LockKeyhole, Radio, ScanFace, Zap } from "lucide-react";
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Feature card 1 */}
-            <div className="card bg-base-100 border border-base-300 p-6 rounded-2xl shadow-inner group hover:border-primary/40 transition-all duration-300">
-              <div className="p-3 bg-primary/10 text-primary w-fit rounded-xl group-hover:bg-primary group-hover:text-primary-content transition-colors duration-300">
-                <Eye className="w-5 h-5" />
-              </div>
-              <h3 className="font-extrabold text-lg tracking-tight mt-4">
-                AI Gaze Intercept
-              </h3>
-              <p className="text-xs text-base-content/60 leading-relaxed mt-1.5">
-                Monitors gaze vectors to identify persistent multi-angle
-                lookaways outside the active monitor interface.
-              </p>
-            </div>
+const features = [
+  {
+    icon: ScanFace,
+    title: "Face presence",
+    text: "Confirm the right person stays in frame throughout the attempt.",
+    tone: "blue",
+  },
+  {
+    icon: Eye,
+    title: "Attention signals",
+    text: "Surface repeated gaze and window changes without noisy guesswork.",
+    tone: "cyan",
+  },
+  {
+    icon: LockKeyhole,
+    title: "Browser guard",
+    text: "Fullscreen, copy, paste, and tab events are captured in context.",
+    tone: "violet",
+  },
+  {
+    icon: Radio,
+    title: "Live teacher view",
+    text: "Stream compact integrity signals to the people supervising the room.",
+    tone: "emerald",
+  },
+];
 
-            {/* Feature card 2 */}
-            <div className="card bg-base-100 border border-base-300 p-6 rounded-2xl shadow-inner group hover:border-secondary/40 transition-all duration-300">
-              <div className="p-3 bg-secondary/10 text-secondary w-fit rounded-xl group-hover:bg-secondary group-hover:text-secondary-content transition-colors duration-300">
-                <MonitorSmartphone className="w-5 h-5" />
-              </div>
-              <h3 className="font-extrabold text-lg tracking-tight mt-4">
-                Device Classifier
-              </h3>
-              <p className="text-xs text-base-content/60 leading-relaxed mt-1.5">
-                Client-side browser computer vision execution filters physical
-                materials, mobile devices or tablets instantly.
-              </p>
-            </div>
-
-            {/* Feature card 3 */}
-            <div className="card bg-base-100 border border-base-300 p-6 rounded-2xl shadow-inner group hover:border-accent/40 transition-all duration-300">
-              <div className="p-3 bg-accent/10 text-accent w-fit rounded-xl group-hover:bg-accent group-hover:text-accent-content transition-colors duration-300">
-                <Ban className="w-5 h-5" />
-              </div>
-              <h3 className="font-extrabold text-lg tracking-tight mt-4">
-                Hardware Lockout
-              </h3>
-              <p className="text-xs text-base-content/60 leading-relaxed mt-1.5">
-                Restricts window resizing, multiple application context
-                switches, copy-paste shortcuts and active clipboards.
-              </p>
-            </div>
-
-            {/* Feature card 4 */}
-            <div className="card bg-base-100 border border-base-300 p-6 rounded-2xl shadow-inner group hover:border-success/40 transition-all duration-300">
-              <div className="p-3 bg-success/10 text-success w-fit rounded-xl group-hover:bg-success group-hover:text-success-content transition-colors duration-300">
-                <Radio className="w-5 h-5" />
-              </div>
-              <h3 className="font-extrabold text-lg tracking-tight mt-4">
-                WebSocket Pipe
-              </h3>
-              <p className="text-xs text-base-content/60 leading-relaxed mt-1.5">
-                Pipes threat metadata via structural socket.io handlers directly
-                to live instructor layout channels.
-              </p>
-            </div>
-          </div>
+const Feature = () => (
+  <section
+    id="features"
+    className="section-space border-y border-slate-200/80 bg-white/60"
+  >
+    <div className="site-container">
+      <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+        <div>
+          <span className="eyebrow">
+            <Zap className="h-4 w-4" /> Built for focus
+          </span>
+          <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+            Quiet protection. Clear signals.
+          </h2>
         </div>
+        <p className="max-w-md text-sm leading-6 text-slate-500">
+          The platform works in the background so teachers can see what matters
+          and students can concentrate on the questions.
+        </p>
+      </div>
+      <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {features.map(({ icon: Icon, title, text, tone }) => (
+          <article
+            key={title}
+            className="surface group p-5 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl"
+          >
+            <div
+              className={`grid h-11 w-11 place-items-center rounded-xl ${tone === "blue" ? "bg-blue-100 text-blue-600" : tone === "cyan" ? "bg-cyan-100 text-cyan-600" : tone === "violet" ? "bg-indigo-100 text-indigo-600" : "bg-emerald-100 text-emerald-600"}`}
+            >
+              <Icon className="h-5 w-5" />
+            </div>
+            <h3 className="mt-5 text-base font-black text-slate-950">
+              {title}
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-slate-500">{text}</p>
+          </article>
+        ))}
       </div>
     </div>
-  );
-};
+  </section>
+);
 
 export default Feature;

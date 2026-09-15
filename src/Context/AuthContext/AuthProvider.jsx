@@ -2,10 +2,13 @@ import React, { useEffect, useState } from "react";
 import { auth } from "./firebase.config";
 
 import {
+  browserLocalPersistence,
+  browserSessionPersistence,
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   onAuthStateChanged,
   sendPasswordResetEmail,
+  setPersistence,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
@@ -26,6 +29,16 @@ const AuthProvider = ({ children }) => {
   const userSignIn = (email, password) => {
     return signInWithEmailAndPassword(auth, email, password);
   };
+
+  // Secure "remember me": choose how long Firebase keeps the session.
+  // We NEVER store the raw password anywhere.
+  const setRememberMe = (remember) => {
+    return setPersistence(
+      auth,
+      remember ? browserLocalPersistence : browserSessionPersistence,
+    );
+  };
+
   const updateUserProfile = (profile) => {
     return updateProfile(auth.currentUser, profile);
   };
@@ -56,6 +69,7 @@ const AuthProvider = ({ children }) => {
     signOutUser,
     googleSignIn,
     userSignIn,
+    setRememberMe,
     loading,
     setLoading,
     setUser,
