@@ -5,6 +5,8 @@ import {
   ArrowUpRight,
   CalendarDays,
   ChevronRight,
+  FilePlus2,
+  LogIn,
   LogOut,
   ShieldCheck,
 } from "lucide-react";
@@ -24,7 +26,10 @@ const DashboardShell = ({
   const { signOutUser } = React.useContext(AuthContext);
   const { pathname } = useLocation();
   const isTeacher = role === "teacher";
-  const isRoomPage = pathname === "/exam";
+  const workspacePath = isTeacher
+    ? "/teacher/exams/create"
+    : "/student/exams/join";
+  const isWorkspacePage = pathname === workspacePath;
   const accentClasses = isTeacher
     ? { bg: "bg-secondary", soft: "bg-secondary/15" }
     : { bg: "bg-primary", soft: "bg-primary/15" };
@@ -57,7 +62,7 @@ const DashboardShell = ({
             <nav className="mt-3 space-y-1">
               <Link
                 to={isTeacher ? "/profile/teacher" : "/profile/student"}
-                className={`flex items-center justify-between rounded-2xl px-3 py-3 text-sm font-semibold transition ${!isRoomPage ? accentClasses.soft : "text-slate-400 hover:bg-white/10 hover:text-white"}`}
+                className={`flex items-center justify-between rounded-2xl px-3 py-3 text-sm font-semibold transition ${!isWorkspacePage ? accentClasses.soft : "text-slate-400 hover:bg-white/10 hover:text-white"}`}
               >
                 <span className="flex items-center gap-3">
                   <Activity className="h-4 w-4" /> Overview
@@ -65,10 +70,17 @@ const DashboardShell = ({
                 <ChevronRight className="h-4 w-4 text-slate-400" />
               </Link>
               <Link
-                to="/exam"
-                className={`flex items-center justify-between rounded-2xl px-3 py-3 text-sm font-semibold transition ${isRoomPage ? accentClasses.soft + " text-white" : "text-slate-400 hover:bg-white/10 hover:text-white"}`}
+                to={workspacePath}
+                className={`flex items-center justify-between rounded-2xl px-3 py-3 text-sm font-semibold transition ${isWorkspacePage ? accentClasses.soft + " text-white" : "text-slate-400 hover:bg-white/10 hover:text-white"}`}
               >
-                <span>{isTeacher ? "Manage rooms" : "Exam rooms"}</span>
+                <span className="flex items-center gap-3">
+                  {isTeacher ? (
+                    <FilePlus2 className="h-4 w-4" />
+                  ) : (
+                    <LogIn className="h-4 w-4" />
+                  )}
+                  {isTeacher ? "Create exam" : "Join exam"}
+                </span>
                 <ChevronRight className="h-4 w-4" />
               </Link>
             </nav>

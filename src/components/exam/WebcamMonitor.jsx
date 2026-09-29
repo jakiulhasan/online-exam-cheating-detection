@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Camera, CameraOff, ScanFace } from "lucide-react";
 
 // WebcamMonitor — live camera preview + slot for future AI proctoring.
@@ -8,7 +8,11 @@ import { Camera, CameraOff, ScanFace } from "lucide-react";
 // TensorFlow.js / YOLO gaze or face-count model would hook in later:
 // grab frames from `videoRef`, run inference, and call `onSignal(...)`
 // which routes straight into the useProctoring violation pipeline.
-const WebcamMonitor = ({ active = false, onSignal }) => {
+const WebcamMonitor = ({
+  active = false,
+  onSignal,
+  title = "Webcam Monitor",
+}) => {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const [status, setStatus] = useState("idle"); // idle | live | denied | unsupported
@@ -65,7 +69,7 @@ const WebcamMonitor = ({ active = false, onSignal }) => {
     <div className="card bg-base-100 border border-base-300 rounded-2xl overflow-hidden">
       <div className="px-4 py-2.5 border-b border-base-200 flex items-center justify-between">
         <span className="flex items-center gap-2 text-sm font-bold">
-          <ScanFace className="w-4 h-4 text-primary" /> Webcam Monitor
+          <ScanFace className="w-4 h-4 text-primary" /> {title}
         </span>
         {status === "live" ? (
           <span className="badge badge-success badge-sm gap-1 text-white">

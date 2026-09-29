@@ -1,5 +1,6 @@
-import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { Link, Navigate, useNavigate, useParams } from "react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ShieldAlert,
   AlertTriangle,
@@ -50,7 +51,6 @@ const QUESTIONS = [
   },
 ];
 
-const EXAM_SECONDS = 5 * 60; // 5 minutes
 const MAX_VIOLATIONS = 5;
 
 const violationLabel = {
@@ -76,11 +76,24 @@ const ProctoredExam = () => {
   const { user } = useContext(AuthContext);
   const axiosSecure = useAxiosSecure();
   const navigate = useNavigate();
+  const {
+    data: room,
+    isLoading: roomLoading,
+    isError: roomError,
+  } = useQuery({
+    queryKey: ["room-detail", roomId],
+    enabled: !!user?.email && !!roomId,
+    staleTime: 0,
+    queryFn: async () =>
+      (await axiosSecure.get(`/rooms/${encodeURIComponent(roomId)}`)).data,
+  });
+  const examSeconds = Math.max(1, Number(room?.durationMinutes) || 60) * 60;
+  const roomStarted = room?.status === "in-progress";
 
-  const [phase, setPhase] = useState("rules"); // rules | exam | result
+  const [phase, setPhase] = useState("exam"); // exam | result
   const [answers, setAnswers] = useState({}); // { questionIndex: choiceIndex }
   const [current, setCurrent] = useState(0);
-  const [secondsLeft, setSecondsLeft] = useState(EXAM_SECONDS);
+  const [secondsLeft, setSecondsLeft] = useState(60 * 60);
   const [toasts, setToasts] = useState([]);
   const [result, setResult] = useState(null); // { score, total, reason, violations }
 
@@ -114,24 +127,19 @@ const ProctoredExam = () => {
     [axiosSecure, roomId],
   );
 
-  const {
-    count,
-    isFullscreen,
-    requestFullscreen,
-    exitFullscreen,
-    reset,
-  } = useProctoring({
-    active: phase === "exam",
-    maxViolations: MAX_VIOLATIONS,
-    onViolation: (entry, currentCount) => {
-      violationsRef.current = [...violationsRef.current, entry];
-      pushToast(`${entry.detail} (${currentCount}/${MAX_VIOLATIONS})`);
-      logViolation(entry);
-    },
-    onLimitReached: () => {
-      finishExam("auto");
-    },
-  });
+  const { count, isFullscreen, requestFullscreen, exitFullscreen } =
+    useProctoring({
+      active: phase === "exam",
+      maxViolations: MAX_VIOLATIONS,
+      onViolation: (entry, currentCount) => {
+        violationsRef.current = [...violationsRef.current, entry];
+        pushToast(`${entry.detail} (${currentCount}/${MAX_VIOLATIONS})`);
+        logViolation(entry);
+      },
+      onLimitReached: () => {
+        finishExam("auto");
+      },
+    });
 
   // finishExam reads answers/violations from refs so it is always accurate,
   // even when fired synchronously the moment the violation limit is hit.
@@ -156,94 +164,58 @@ const ProctoredExam = () => {
     [exitFullscreen],
   );
 
-  const startExam = async () => {
-    submittedRef.current = false;
-    reset();
-    violationsRef.current = [];
-    answersRef.current = {};
-    setAnswers({});
-    setCurrent(0);
-    setSecondsLeft(EXAM_SECONDS);
-    setPhase("exam");
-    await requestFullscreen();
-  };
-
   // Countdown timer.
   useEffect(() => {
-    if (phase !== "exam") return;
-    const id = setInterval(() => {
-      setSecondsLeft((s) => {
-        if (s <= 1) {
-          clearInterval(id);
-          finishExam("time");
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [phase, finishExam]);
+    if (phase !== "exam" || !roomStarted) return;
+    const roomStart = Date.parse(room?.startedAt || "");
+    const deadline = Number.isNaN(roomStart)
+      ? Date.now() + examSeconds * 1000
+      : roomStart + examSeconds * 1000;
+    const updateCountdown = () => {
+      const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      setSecondsLeft(remaining);
+      if (remaining === 0) finishExam("time");
+    };
+    const initialTick = setTimeout(updateCountdown, 0);
+    const interval = setInterval(updateCountdown, 1000);
+    return () => {
+      clearTimeout(initialTick);
+      clearInterval(interval);
+    };
+  }, [examSeconds, finishExam, phase, room?.startedAt, roomStarted]);
 
   const selectAnswer = (choiceIdx) =>
     setAnswers((a) => ({ ...a, [current]: choiceIdx }));
 
-  // ============================ RULES ============================
-  if (phase === "rules") {
+  if (roomLoading) {
     return (
-      <div className="min-h-screen bg-base-200 flex items-center justify-center p-4">
-        <div className="card w-full max-w-2xl bg-base-100 shadow-2xl border border-base-300 rounded-3xl p-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2.5 bg-gradient-to-br from-primary to-secondary text-primary-content rounded-xl shadow-lg">
-              <ShieldAlert className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black tracking-tight">
-                Proctored Exam
-              </h1>
-              <p className="text-xs text-base-content/60">
-                Room <span className="font-mono font-bold">{roomId}</span> •{" "}
-                {user?.email}
-              </p>
-            </div>
-          </div>
+      <div className="grid min-h-screen place-items-center bg-base-200 p-4 text-sm font-semibold text-base-content/60">
+        Checking exam access...
+      </div>
+    );
+  }
 
-          <div className="alert alert-warning rounded-2xl my-4 text-sm">
-            <AlertTriangle className="w-5 h-5 shrink-0" />
-            <span>
-              This exam is monitored. Leaving fullscreen, switching tabs, or
-              copying content is recorded as a violation.
-            </span>
-          </div>
-
-          <ul className="space-y-2.5 text-sm text-base-content/80 mb-6">
-            {[
-              "The exam opens in fullscreen — stay in it the whole time.",
-              "Do not switch tabs, minimize, or click away from the window.",
-              "Copy, paste, right-click and DevTools shortcuts are disabled.",
-              `Reaching ${MAX_VIOLATIONS} violations auto-submits your exam.`,
-              `You have ${EXAM_SECONDS / 60} minutes and ${QUESTIONS.length} questions.`,
-            ].map((rule) => (
-              <li key={rule} className="flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-success mt-0.5 shrink-0" />
-                {rule}
-              </li>
-            ))}
-          </ul>
-
-          <div className="flex flex-col sm:flex-row gap-3">
-            <button
-              onClick={startExam}
-              className="btn btn-primary rounded-xl flex-1 gap-2 text-white"
-            >
-              <Maximize className="w-4 h-4" /> Start Exam (enter fullscreen)
-            </button>
-            <Link to="/exam" className="btn btn-ghost rounded-xl">
-              Cancel
-            </Link>
-          </div>
+  if (roomError || !room) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-base-200 p-4">
+        <div className="max-w-md rounded-2xl border border-base-300 bg-base-100 p-6 text-center shadow-xl">
+          <h1 className="text-xl font-black">Exam access unavailable</h1>
+          <p className="mt-2 text-sm text-base-content/60">
+            Join an exam assigned to your Gmail account before opening it.
+          </p>
+          <Link
+            to="/student/exams/join"
+            className="btn btn-primary mt-5 text-white"
+          >
+            Back to Join exam
+          </Link>
         </div>
       </div>
     );
+  }
+
+  if (!roomStarted) {
+    return <Navigate to={`/exam/${roomId}/live`} replace />;
   }
 
   // ============================ RESULT ============================
@@ -324,10 +296,10 @@ const ProctoredExam = () => {
 
           <div className="flex flex-col sm:flex-row gap-3">
             <button
-              onClick={() => navigate("/exam")}
+              onClick={() => navigate("/student/exams/join")}
               className="btn btn-primary rounded-xl flex-1 gap-2 text-white"
             >
-              Back to Exam Rooms <ArrowRight className="w-4 h-4" />
+              Back to assigned exams <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -374,7 +346,9 @@ const ProctoredExam = () => {
           </div>
           <div
             className={`flex items-center gap-1.5 font-bold px-3 py-1.5 rounded-lg ${
-              count > 0 ? "bg-error/15 text-error" : "bg-success/15 text-success"
+              count > 0
+                ? "bg-error/15 text-error"
+                : "bg-success/15 text-success"
             }`}
           >
             <AlertTriangle className="w-4 h-4" /> {count}/{MAX_VIOLATIONS}

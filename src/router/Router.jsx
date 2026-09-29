@@ -9,7 +9,10 @@ import ForgotPassword from "../pages/Auth/ForgotPassword";
 import CompleteProfile from "../pages/Auth/CompleteProfile";
 import StudentProfile from "../pages/Profile/StudentProfile";
 import TeacherProfile from "../pages/Profile/TeacherProfile";
-import ExamRoom from "../pages/Exam/ExamRoom";
+import CreateExam from "../pages/Exam/CreateExam";
+import JoinExam from "../pages/Exam/JoinExam";
+import StudentWaitingRoom from "../pages/Exam/StudentWaitingRoom";
+import TeacherWaitingRoom from "../pages/Exam/TeacherWaitingRoom";
 import ProctoredExam from "../pages/Exam/ProctoredExam";
 import NotFound from "../pages/Error/NotFound";
 import PrivateRoute from "../routes/PrivateRoute";
@@ -48,10 +51,18 @@ const Router = createBrowserRouter([
         ),
       },
       {
-        path: "exam",
+        path: "teacher/exams/create",
         element: (
-          <PrivateRoute>
-            <ExamRoom />
+          <PrivateRoute role="teacher">
+            <CreateExam />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "student/exams/join",
+        element: (
+          <PrivateRoute role="student">
+            <JoinExam />
           </PrivateRoute>
         ),
       },
@@ -67,9 +78,25 @@ const Router = createBrowserRouter([
 
   // Proctored exam — locked-down full-screen surface, no navbar
   {
+    path: "/exam/:roomId/live",
+    element: (
+      <PrivateRoute role="student">
+        <StudentWaitingRoom />
+      </PrivateRoute>
+    ),
+  },
+  {
+    path: "/exam/:roomId/teacher",
+    element: (
+      <PrivateRoute role="teacher">
+        <TeacherWaitingRoom />
+      </PrivateRoute>
+    ),
+  },
+  {
     path: "/exam/:roomId/take",
     element: (
-      <PrivateRoute>
+      <PrivateRoute role="student">
         <ProctoredExam />
       </PrivateRoute>
     ),

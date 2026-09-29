@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   Users,
 } from "lucide-react";
+import { Link } from "react-router";
 import { AuthContext } from "../../Context/AuthContext/AuthContext";
 import useAxiosSecure from "../../hooks/useAxiosSecure";
 import DashboardShell from "../../components/dashboard/DashboardShell";
@@ -32,9 +33,8 @@ const TeacherProfile = () => {
       profile={{ name, email, joined }}
       eyebrow="Teacher workspace"
       title={`Good to see you, ${name.split(" ")[0]}.`}
-      description="Create secure exam rooms, keep an eye on participation, and review integrity signals from one command center."
-      primaryAction={{ to: "/exam", label: "Create exam room" }}
-      secondaryAction={{ to: "/exam", label: "Open live monitor" }}
+      description="Create an exam, set its schedule, and invite students by Gmail address."
+      primaryAction={{ to: "/teacher/exams/create", label: "Create exam" }}
       stats={[
         {
           icon: ClipboardList,
@@ -66,7 +66,7 @@ const TeacherProfile = () => {
               Teaching control center
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              Your rooms and monitoring activity will appear here.
+              Your exams and student participation will appear here.
             </p>
           </div>
           <div className="hidden rounded-xl bg-secondary/10 p-3 text-secondary sm:block">
@@ -74,16 +74,16 @@ const TeacherProfile = () => {
           </div>
         </div>
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-dashed border-slate-300 p-4">
+          <Link
+            to="/teacher/exams/create"
+            className="rounded-xl border border-dashed border-slate-300 p-4 transition hover:border-secondary hover:bg-secondary/5"
+          >
             <PlusCircle className="h-4 w-4 text-secondary" />
-            <p className="mt-3 text-sm font-bold text-slate-800">
-              Create your first room
-            </p>
+            <p className="mt-3 text-sm font-bold text-slate-800">Create exam</p>
             <p className="mt-1 text-xs leading-5 text-slate-500">
-              Set an exam type, share the generated code, and invite your
-              students.
+              Add exam details and choose which Gmail accounts can join.
             </p>
-          </div>
+          </Link>
           <div className="rounded-xl border border-dashed border-slate-300 p-4">
             <ShieldCheck className="h-4 w-4 text-emerald-500" />
             <p className="mt-3 text-sm font-bold text-slate-800">

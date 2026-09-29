@@ -32,9 +32,8 @@ const StudentProfile = () => {
       profile={{ name, email, joined }}
       eyebrow="Student workspace"
       title={`Welcome back, ${name.split(" ")[0]}.`}
-      description="Keep your exam schedule, rooms, and integrity record in one focused workspace."
-      primaryAction={{ to: "/exam", label: "Join an exam" }}
-      secondaryAction={{ to: "/exam", label: "View rooms" }}
+      description="See exams assigned to your Gmail account, check their schedule, and join when you are ready."
+      primaryAction={{ to: "/student/exams/join", label: "Join exam" }}
       stats={[
         {
           icon: History,
@@ -69,8 +68,8 @@ const StudentProfile = () => {
               </h2>
             </div>
             <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
-              Join the room code shared by your instructor. Your camera and
-              browser activity will be checked when the exam begins.
+              Exams assigned to {email} will appear in your join list. Your
+              camera and browser activity are checked during a protected exam.
             </p>
           </div>
           <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
@@ -81,10 +80,10 @@ const StudentProfile = () => {
           <div className="rounded-xl bg-slate-50 p-4">
             <Clock3 className="h-4 w-4 text-slate-400" />
             <p className="mt-3 text-sm font-bold text-slate-800">
-              No upcoming exams
+              Assigned exams
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              Your joined rooms will appear here.
+              Check the Join exam page for dates and duration.
             </p>
           </div>
           <div className="rounded-xl bg-slate-50 p-4">

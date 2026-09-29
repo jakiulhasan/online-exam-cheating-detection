@@ -8,7 +8,8 @@ const MainLayout = () => {
     pathname === "/profile/student" ||
     pathname === "/profile/teacher" ||
     pathname === "/profile/complete" ||
-    pathname === "/exam";
+    pathname.startsWith("/teacher/exams/") ||
+    pathname.startsWith("/student/exams/");
 
   if (isDashboard) return <Outlet />;
 
