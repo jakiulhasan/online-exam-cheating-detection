@@ -8,6 +8,7 @@ const MainLayout = () => {
     pathname === "/profile/student" ||
     pathname === "/profile/teacher" ||
     pathname === "/profile/complete" ||
+    pathname === "/student/results" ||
     pathname.startsWith("/teacher/exams/") ||
     pathname.startsWith("/student/exams/");
 

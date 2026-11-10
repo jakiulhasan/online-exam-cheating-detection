@@ -14,6 +14,8 @@ import JoinExam from "../pages/Exam/JoinExam";
 import StudentWaitingRoom from "../pages/Exam/StudentWaitingRoom";
 import TeacherWaitingRoom from "../pages/Exam/TeacherWaitingRoom";
 import ProctoredExam from "../pages/Exam/ProctoredExam";
+import StudentResults from "../pages/Exam/StudentResults";
+import TeacherExamResults from "../pages/Exam/TeacherExamResults";
 import NotFound from "../pages/Error/NotFound";
 import PrivateRoute from "../routes/PrivateRoute";
 
@@ -55,6 +57,22 @@ const Router = createBrowserRouter([
         element: (
           <PrivateRoute role="teacher">
             <CreateExam />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "teacher/exams/:roomId/results",
+        element: (
+          <PrivateRoute role="teacher">
+            <TeacherExamResults />
+          </PrivateRoute>
+        ),
+      },
+      {
+        path: "student/results",
+        element: (
+          <PrivateRoute role="student">
+            <StudentResults />
           </PrivateRoute>
         ),
       },

@@ -8,6 +8,7 @@ import {
   Copy,
   DoorOpen,
   FilePlus2,
+  Trophy,
 } from "lucide-react";
 import { Link } from "react-router";
 import DashboardShell from "../../components/dashboard/DashboardShell";
@@ -268,6 +269,12 @@ const CreateExam = () => {
                   className="inline-flex h-9 items-center gap-2 rounded-lg bg-secondary px-3 text-xs font-bold text-white hover:brightness-95"
                 >
                   <DoorOpen className="h-4 w-4" /> Join room
+                </Link>
+                <Link
+                  to={`/teacher/exams/${exam.code}/results`}
+                  className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                >
+                  <Trophy className="h-4 w-4 text-amber-500" /> Results
                 </Link>
               </div>
             </article>

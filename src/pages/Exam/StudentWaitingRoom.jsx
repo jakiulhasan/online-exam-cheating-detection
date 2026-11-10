@@ -121,10 +121,14 @@ export default function StudentWaitingRoom({
   }, [room?.chat]);
 
   useEffect(() => {
+    if (room?.status === "completed") {
+      navigate("/student/exams/join", { replace: true });
+      return;
+    }
     if (!examStarted) return;
     if (onExamStart) onExamStart();
     else navigate(`/exam/${roomId}/take`, { replace: true });
-  }, [examStarted, navigate, onExamStart, roomId]);
+  }, [examStarted, navigate, onExamStart, room?.status, roomId]);
 
   const send = (e) => {
     e.preventDefault();

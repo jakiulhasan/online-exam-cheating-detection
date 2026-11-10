@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, CalendarClock, Clock3, Users } from "lucide-react";
 import { Link, useNavigate } from "react-router";
@@ -6,9 +6,12 @@ import DashboardShell from "../../components/dashboard/DashboardShell";
 import { AuthContext } from "../../Context/AuthContext/AuthContext";
 import useAxiosSecure from "../../hooks/useAxiosSecure";
 
+const JOIN_GRACE_PERIOD_MS = 5 * 60 * 1000;
+
 const JoinExam = () => {
   const { user } = useContext(AuthContext);
   const [roomCode, setRoomCode] = useState("");
+  const [now, setNow] = useState(0);
   const navigate = useNavigate();
   const axiosSecure = useAxiosSecure();
   const queryClient = useQueryClient();
@@ -23,6 +26,10 @@ const JoinExam = () => {
     enabled: !!user?.email,
     queryFn: async () => (await axiosSecure.get("/rooms")).data,
   });
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
   const joinExam = useMutation({
     mutationFn: (code) =>
       axiosSecure.post(`/rooms/${code}/join`, {
@@ -107,6 +114,13 @@ const JoinExam = () => {
           const isJoined = exam.students?.some(
             (student) => student.email.toLowerCase() === email,
           );
+          const joinDeadline =
+            new Date(exam.scheduledAt).getTime() + JOIN_GRACE_PERIOD_MS;
+          const isJoinClosed =
+            !Number.isFinite(joinDeadline) ||
+            now >= joinDeadline ||
+            exam.status === "in-progress" ||
+            exam.status === "completed";
           const isJoining =
             joinExam.isPending && joinExam.variables === exam.code;
           return (
@@ -139,7 +153,14 @@ const JoinExam = () => {
                   </span>
                 </div>
               </div>
-              {isJoined ? (
+              {isJoinClosed ? (
+                <span
+                  aria-disabled="true"
+                  className="inline-flex h-10 shrink-0 items-center justify-center border border-slate-200 bg-slate-100 px-4 text-xs font-bold text-slate-500"
+                >
+                  Exam already start
+                </span>
+              ) : isJoined ? (
                 <Link
                   to={`/exam/${exam.code}/live`}
                   className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-xs font-bold text-white"

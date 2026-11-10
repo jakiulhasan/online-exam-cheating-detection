@@ -8,6 +8,7 @@ import {
   FilePlus2,
   LogIn,
   LogOut,
+  Trophy,
   ShieldCheck,
 } from "lucide-react";
 import { AuthContext } from "../../Context/AuthContext/AuthContext";
@@ -30,6 +31,7 @@ const DashboardShell = ({
     ? "/teacher/exams/create"
     : "/student/exams/join";
   const isWorkspacePage = pathname === workspacePath;
+  const isOverviewPage = pathname === (isTeacher ? "/profile/teacher" : "/profile/student");
   const accentClasses = isTeacher
     ? { bg: "bg-secondary", soft: "bg-secondary/15" }
     : { bg: "bg-primary", soft: "bg-primary/15" };
@@ -41,7 +43,7 @@ const DashboardShell = ({
   };
 
   return (
-    <main className="min-h-screen bg-[#f4f7fb] text-slate-900">
+    <main className="dashboard-square min-h-screen bg-[#f4f7fb] text-slate-900">
       <div className="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 px-4 py-5 sm:px-6 lg:grid-cols-[250px_1fr] lg:px-8">
         <aside className="hidden self-start rounded-[28px] bg-slate-950 p-5 text-white shadow-xl lg:sticky lg:top-5 lg:flex lg:h-[calc(100vh-40px)] lg:flex-col lg:overflow-hidden">
           <Link to="/" className="flex items-center gap-3 px-2 py-3">
@@ -62,13 +64,24 @@ const DashboardShell = ({
             <nav className="mt-3 space-y-1">
               <Link
                 to={isTeacher ? "/profile/teacher" : "/profile/student"}
-                className={`flex items-center justify-between rounded-2xl px-3 py-3 text-sm font-semibold transition ${!isWorkspacePage ? accentClasses.soft : "text-slate-400 hover:bg-white/10 hover:text-white"}`}
+                className={`flex items-center justify-between rounded-2xl px-3 py-3 text-sm font-semibold transition ${isOverviewPage ? accentClasses.soft : "text-slate-400 hover:bg-white/10 hover:text-white"}`}
               >
                 <span className="flex items-center gap-3">
                   <Activity className="h-4 w-4" /> Overview
                 </span>
                 <ChevronRight className="h-4 w-4 text-slate-400" />
               </Link>
+              {!isTeacher && (
+                <Link
+                  to="/student/results"
+                  className={`flex items-center justify-between rounded-2xl px-3 py-3 text-sm font-semibold transition ${pathname === "/student/results" ? accentClasses.soft + " text-white" : "text-slate-400 hover:bg-white/10 hover:text-white"}`}
+                >
+                  <span className="flex items-center gap-3">
+                    <Trophy className="h-4 w-4" /> My results
+                  </span>
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
+              )}
               <Link
                 to={workspacePath}
                 className={`flex items-center justify-between rounded-2xl px-3 py-3 text-sm font-semibold transition ${isWorkspacePage ? accentClasses.soft + " text-white" : "text-slate-400 hover:bg-white/10 hover:text-white"}`}
@@ -122,6 +135,46 @@ const DashboardShell = ({
               <LogOut className="h-4 w-4" /> Sign out
             </button>
           </div>
+
+          <nav className="mb-6 grid grid-cols-2 gap-2 sm:flex lg:hidden">
+            <Link
+              to={isTeacher ? "/profile/teacher" : "/profile/student"}
+              className={`flex min-h-11 items-center gap-2 border px-3 text-xs font-bold transition ${
+                isOverviewPage
+                  ? `${accentClasses.soft} border-slate-200 text-slate-950`
+                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+              }`}
+            >
+              <Activity className="h-4 w-4" /> Overview
+            </Link>
+            {!isTeacher && (
+              <Link
+                to="/student/results"
+                className={`flex min-h-11 items-center gap-2 border px-3 text-xs font-bold transition ${
+                  pathname === "/student/results"
+                    ? `${accentClasses.soft} border-slate-200 text-slate-950`
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                }`}
+              >
+                <Trophy className="h-4 w-4" /> My results
+              </Link>
+            )}
+            <Link
+              to={workspacePath}
+              className={`flex min-h-11 items-center gap-2 border px-3 text-xs font-bold transition ${
+                isWorkspacePage
+                  ? `${accentClasses.soft} border-slate-200 text-slate-950`
+                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+              }`}
+            >
+              {isTeacher ? (
+                <FilePlus2 className="h-4 w-4" />
+              ) : (
+                <LogIn className="h-4 w-4" />
+              )}
+              {isTeacher ? "Create exam" : "Join exam"}
+            </Link>
+          </nav>
 
           <div
             className={`relative overflow-hidden rounded-[30px] ${accentClasses.bg} p-6 text-white shadow-lg sm:p-8`}

@@ -7,7 +7,9 @@ import {
   History,
   ShieldCheck,
   Target,
+  Trophy,
 } from "lucide-react";
+import { Link } from "react-router";
 import { AuthContext } from "../../Context/AuthContext/AuthContext";
 import useAxiosSecure from "../../hooks/useAxiosSecure";
 import DashboardShell from "../../components/dashboard/DashboardShell";
@@ -95,6 +97,16 @@ const StudentProfile = () => {
               Integrity checks run only inside an active exam.
             </p>
           </div>
+          <Link
+            to="/student/results"
+            className="rounded-xl border border-primary/15 bg-primary/5 p-4 transition hover:border-primary/40"
+          >
+            <Trophy className="h-4 w-4 text-primary" />
+            <p className="mt-3 text-sm font-bold text-slate-800">My results</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Review exam-wise marks and see each room's scoreboard.
+            </p>
+          </Link>
         </div>
       </div>
     </DashboardShell>

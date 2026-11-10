@@ -1,6 +1,17 @@
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router";
-import { useQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   ShieldAlert,
   AlertTriangle,
@@ -11,47 +22,26 @@ import {
   Lock,
   ArrowRight,
   ListChecks,
+  MessageCircle,
+  Send,
 } from "lucide-react";
 import { AuthContext } from "../../Context/AuthContext/AuthContext";
 import useAxiosSecure from "../../hooks/useAxiosSecure";
 import useProctoring from "../../hooks/useProctoring";
 import WebcamMonitor from "../../components/exam/WebcamMonitor";
 
-// Stub question bank (would come from the room / an AI generator later).
-const QUESTIONS = [
-  {
-    q: "Which HTTP status code means the request was understood but access is refused?",
-    choices: ["200 OK", "301 Moved", "403 Forbidden", "500 Server Error"],
-    answer: 2,
-  },
-  {
-    q: "In React, which hook lets you perform side effects after render?",
-    choices: ["useState", "useEffect", "useMemo", "useRef"],
-    answer: 1,
-  },
-  {
-    q: "What does the 'M' in the MERN stack stand for?",
-    choices: ["MySQL", "MongoDB", "Meteor", "Mongoose"],
-    answer: 1,
-  },
-  {
-    q: "Which method makes an element enter fullscreen in the browser?",
-    choices: [
-      "el.goFullscreen()",
-      "el.requestFullscreen()",
-      "window.fullscreen()",
-      "document.maximize()",
-    ],
-    answer: 1,
-  },
-  {
-    q: "Which event fires when a browser tab becomes hidden?",
-    choices: ["blur", "visibilitychange", "unload", "pagehide"],
-    answer: 1,
-  },
-];
-
 const MAX_VIOLATIONS = 5;
+
+const optionLabel = (index) => {
+  let label = "";
+  let value = index + 1;
+  while (value > 0) {
+    value -= 1;
+    label = String.fromCharCode(65 + (value % 26)) + label;
+    value = Math.floor(value / 26);
+  }
+  return label;
+};
 
 const violationLabel = {
   "tab-hidden": "Tab switch",
@@ -75,7 +65,12 @@ const ProctoredExam = () => {
   const { roomId } = useParams();
   const { user } = useContext(AuthContext);
   const axiosSecure = useAxiosSecure();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [chatDraft, setChatDraft] = useState("");
+  const [unreadNotices, setUnreadNotices] = useState(0);
+  const noticeCountRef = useRef(null);
+  const chatEndRef = useRef(null);
   const {
     data: room,
     isLoading: roomLoading,
@@ -86,9 +81,39 @@ const ProctoredExam = () => {
     staleTime: 0,
     queryFn: async () =>
       (await axiosSecure.get(`/rooms/${encodeURIComponent(roomId)}`)).data,
+    refetchInterval: (query) =>
+      query.state.data?.status === "completed" ? false : 1500,
+    refetchIntervalInBackground: true,
+  });
+  const sendChat = useMutation({
+    mutationFn: (message) =>
+      axiosSecure.post(`/rooms/${roomId}/chat`, { message }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["room-detail", roomId] }),
   });
   const examSeconds = Math.max(1, Number(room?.durationMinutes) || 60) * 60;
   const roomStarted = room?.status === "in-progress";
+  const examQuestions = useMemo(
+    () =>
+      (room?.questions || []).map((question) => ({
+        q: question.question || question.q,
+        choices: question.options || question.choices || [],
+      })),
+    [room],
+  );
+  const notices = room?.notices || [];
+  const messages = (room?.chat || []).map((message) => ({
+    ...message,
+    from:
+      message.senderEmail?.toLowerCase() === user?.email?.toLowerCase()
+        ? "me"
+        : "teacher",
+    name:
+      message.senderName ||
+      message.senderEmail?.split("@")[0] ||
+      (message.senderRole === "teacher" ? "Teacher" : "Student"),
+  }));
+  const chatEnabled = room?.chatEnabled !== false;
 
   const [phase, setPhase] = useState("exam"); // exam | result
   const [answers, setAnswers] = useState({}); // { questionIndex: choiceIndex }
@@ -106,6 +131,20 @@ const ProctoredExam = () => {
   useEffect(() => {
     answersRef.current = answers;
   }, [answers]);
+
+  useEffect(() => {
+    if (!room?.notices) return;
+    if (noticeCountRef.current !== null && room.notices.length > noticeCountRef.current) {
+      setUnreadNotices(
+        (count) => count + room.notices.length - noticeCountRef.current,
+      );
+    }
+    noticeCountRef.current = room.notices.length;
+  }, [room?.notices]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [room?.chat]);
 
   const pushToast = useCallback((msg, tone = "warning") => {
     const id = Math.random().toString(36).slice(2);
@@ -144,25 +183,43 @@ const ProctoredExam = () => {
   // finishExam reads answers/violations from refs so it is always accurate,
   // even when fired synchronously the moment the violation limit is hit.
   const finishExam = useCallback(
-    (reason) => {
+    async (reason) => {
       if (submittedRef.current) return;
       submittedRef.current = true;
       const finalAnswers = answersRef.current;
-      const finalScore = QUESTIONS.reduce(
-        (acc, q, i) => (finalAnswers[i] === q.answer ? acc + 1 : acc),
-        0,
-      );
-      setResult({
-        score: finalScore,
-        total: QUESTIONS.length,
-        reason, // "manual" | "auto" | "time"
-        violations: violationsRef.current,
-      });
+      setPhase("submitting");
+      try {
+        const { data } = await axiosSecure.post(`/rooms/${roomId}/submit`, {
+          answers: finalAnswers,
+          reason,
+        });
+        setResult({
+          score: data.score,
+          total: data.total,
+          reason,
+          violations: violationsRef.current,
+        });
+      } catch (error) {
+        setResult({
+          score: null,
+          total: examQuestions.length,
+          reason,
+          violations: violationsRef.current,
+          submissionError:
+            error.response?.data?.error ||
+            "Your answers could not be scored. Contact your teacher.",
+        });
+      }
       setPhase("result");
       exitFullscreen();
     },
-    [exitFullscreen],
+    [axiosSecure, examQuestions.length, exitFullscreen, roomId],
   );
+
+  useEffect(() => {
+    if (room?.status !== "completed" || phase !== "exam") return;
+    finishExam("time");
+  }, [finishExam, phase, room?.status]);
 
   // Countdown timer.
   useEffect(() => {
@@ -186,6 +243,15 @@ const ProctoredExam = () => {
 
   const selectAnswer = (choiceIdx) =>
     setAnswers((a) => ({ ...a, [current]: choiceIdx }));
+
+  const submitChatMessage = (event) => {
+    event.preventDefault();
+    const message = chatDraft.trim();
+    if (!message || !chatEnabled || sendChat.isPending) return;
+    sendChat.mutate(message, {
+      onSuccess: () => setChatDraft(""),
+    });
+  };
 
   if (roomLoading) {
     return (
@@ -214,13 +280,50 @@ const ProctoredExam = () => {
     );
   }
 
-  if (!roomStarted) {
+  if (room.status === "completed" && phase === "exam") {
+    return (
+      <div className="grid min-h-screen place-items-center bg-base-200 p-4 text-sm font-semibold text-base-content/60">
+        Exam time is over. Submitting your answers...
+      </div>
+    );
+  }
+
+  if (!roomStarted && room.status !== "completed") {
     return <Navigate to={`/exam/${roomId}/live`} replace />;
   }
 
+  if (!examQuestions.length && room.status !== "completed") {
+    return (
+      <div className="grid min-h-screen place-items-center bg-base-200 p-4">
+        <div className="max-w-md rounded-2xl border border-base-300 bg-base-100 p-6 text-center shadow-xl">
+          <h1 className="text-xl font-black">Questions are unavailable</h1>
+          <p className="mt-2 text-sm text-base-content/60">
+            This exam room has no saved questions. Return to your assigned
+            exams and open the correct room, or contact your teacher.
+          </p>
+          <Link
+            to="/student/exams/join"
+            className="btn btn-primary mt-5 text-white"
+          >
+            Back to assigned exams
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   // ============================ RESULT ============================
+  if (phase === "submitting") {
+    return (
+      <div className="grid min-h-screen place-items-center bg-base-200 p-4 text-sm font-semibold text-base-content/60">
+        Submitting your answers...
+      </div>
+    );
+  }
+
   if (phase === "result") {
-    const passed = result.score / result.total >= 0.6;
+    const passed =
+      result.score !== null && result.score / result.total >= 0.6;
     return (
       <div className="min-h-screen bg-base-200 flex items-center justify-center p-4">
         <div className="card w-full max-w-2xl bg-base-100 shadow-2xl border border-base-300 rounded-3xl p-8">
@@ -237,8 +340,15 @@ const ProctoredExam = () => {
               )}
             </div>
             <h1 className="text-3xl font-black tracking-tight mt-3">
-              {result.score} / {result.total}
+              {result.score === null
+                ? "Score unavailable"
+                : `${result.score} / ${result.total}`}
             </h1>
+            {result.submissionError && (
+              <p role="alert" className="mt-2 text-sm text-error">
+                {result.submissionError}
+              </p>
+            )}
             <p className="text-sm text-base-content/60 mt-1">
               {result.reason === "auto" &&
                 "Auto-submitted — violation limit reached."}
@@ -250,7 +360,9 @@ const ProctoredExam = () => {
           <div className="grid grid-cols-2 gap-3 my-6">
             <div className="bg-base-200/60 border border-base-300 rounded-2xl p-4 text-center">
               <div className="text-2xl font-extrabold text-primary">
-                {Math.round((result.score / result.total) * 100)}%
+                {result.score === null
+                  ? "—"
+                  : `${Math.round((result.score / result.total) * 100)}%`}
               </div>
               <div className="text-xs text-base-content/60 mt-0.5">Score</div>
             </div>
@@ -308,7 +420,7 @@ const ProctoredExam = () => {
   }
 
   // ============================ EXAM ============================
-  const q = QUESTIONS[current];
+  const q = examQuestions[current];
   const answeredCount = Object.keys(answers).length;
   const dangerTime = secondsLeft <= 30;
 
@@ -362,7 +474,7 @@ const ProctoredExam = () => {
           <div className="card bg-base-100 border border-base-300 rounded-2xl p-6">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-bold uppercase tracking-wider text-base-content/50">
-                Question {current + 1} of {QUESTIONS.length}
+                Question {current + 1} of {examQuestions.length}
               </span>
               <span className="text-xs text-base-content/50">
                 {answeredCount} answered
@@ -390,7 +502,7 @@ const ProctoredExam = () => {
                           : "bg-base-200 text-base-content/60"
                       }`}
                     >
-                      {String.fromCharCode(65 + i)}
+                      {optionLabel(i)}
                     </span>
                     {c}
                   </button>
@@ -407,10 +519,10 @@ const ProctoredExam = () => {
             >
               Previous
             </button>
-            {current < QUESTIONS.length - 1 ? (
+            {current < examQuestions.length - 1 ? (
               <button
                 onClick={() =>
-                  setCurrent((c) => Math.min(QUESTIONS.length - 1, c + 1))
+                  setCurrent((c) => Math.min(examQuestions.length - 1, c + 1))
                 }
                 className="btn btn-primary rounded-xl gap-2 text-white"
               >
@@ -436,7 +548,7 @@ const ProctoredExam = () => {
               Question navigator
             </h3>
             <div className="grid grid-cols-5 gap-2">
-              {QUESTIONS.map((_, i) => {
+              {examQuestions.map((_, i) => {
                 const done = answers[i] !== undefined;
                 const active = i === current;
                 return (
@@ -459,6 +571,107 @@ const ProctoredExam = () => {
               })}
             </div>
           </div>
+
+          <section className="card bg-base-100 border border-base-300 rounded-2xl p-4">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-base-content/50">
+                Teacher notices
+              </h3>
+              {unreadNotices > 0 && (
+                <button
+                  type="button"
+                  className="badge badge-error gap-1 text-white"
+                  onClick={() => setUnreadNotices(0)}
+                  aria-label="Mark teacher notices as read"
+                >
+                  {unreadNotices} new
+                </button>
+              )}
+            </div>
+            <ul className="max-h-36 space-y-2 overflow-auto">
+              {notices.map((notice) => (
+                <li
+                  key={notice.id}
+                  className="rounded-lg bg-primary/10 px-3 py-2 text-sm"
+                >
+                  <p>{notice.text}</p>
+                  {notice.createdAt && (
+                    <time className="mt-1 block text-right text-xs text-base-content/50">
+                      {new Date(notice.createdAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </time>
+                  )}
+                </li>
+              ))}
+              {!notices.length && (
+                <li className="text-sm text-base-content/50">
+                  No teacher notices yet.
+                </li>
+              )}
+            </ul>
+          </section>
+
+          <section className="card bg-base-100 border border-base-300 rounded-2xl p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-base-content/50">
+                <MessageCircle className="h-4 w-4" /> Live chat
+              </h3>
+              <span
+                className={`badge ${chatEnabled ? "badge-success" : "badge-ghost"}`}
+              >
+                {chatEnabled ? "On" : "Off"}
+              </span>
+            </div>
+            <div className="max-h-56 min-h-20 space-y-2 overflow-y-auto">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`max-w-[90%] rounded-xl px-3 py-2 text-sm ${
+                    message.from === "me"
+                      ? "ml-auto bg-primary text-primary-content"
+                      : "bg-base-200"
+                  }`}
+                >
+                  <p className="mb-0.5 text-[10px] font-bold opacity-70">
+                    {message.from === "me" ? "You" : message.name}
+                  </p>
+                  <p className="break-words">{message.text}</p>
+                </div>
+              ))}
+              {!messages.length && (
+                <p className="text-sm text-base-content/50">
+                  {chatEnabled ? "No messages yet." : "Your teacher turned chat off."}
+                </p>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+            {sendChat.isError && (
+              <p role="alert" className="mt-2 text-xs text-error">
+                {sendChat.error.response?.data?.error ||
+                  "Message could not be sent."}
+              </p>
+            )}
+            <form onSubmit={submitChatMessage} className="mt-3 flex gap-2">
+              <input
+                value={chatDraft}
+                onChange={(event) => setChatDraft(event.target.value)}
+                disabled={!chatEnabled || sendChat.isPending}
+                aria-label="Chat message"
+                placeholder={chatEnabled ? "Type a message" : "Chat is off"}
+                className="input input-bordered input-sm min-w-0 flex-1"
+              />
+              <button
+                type="submit"
+                className="btn btn-primary btn-sm"
+                disabled={!chatEnabled || !chatDraft.trim() || sendChat.isPending}
+                aria-label="Send chat message"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </form>
+          </section>
 
           <div className="card bg-base-100 border border-base-300 rounded-2xl p-4 text-xs text-base-content/60 flex items-start gap-2">
             <Lock className="w-4 h-4 text-primary mt-0.5 shrink-0" />

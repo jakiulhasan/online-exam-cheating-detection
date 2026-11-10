@@ -14,7 +14,7 @@ import useAxiosSecure from "../../hooks/useAxiosSecure";
  * Props (all optional, demo defaults included):
  *  - students:           [{ id, name, online, stream }]  stream = MediaStream (optional)
  *  - questionsSubmitted: boolean
- *  - onAddQuestion()     open your add-question page/modal (coming later)
+ *  - onAddQuestion()     optional custom add-question handler
  *  - onStartExam()
  *  - onOpenStudent(id)   called on double tap / double click of a tile
  *  - notices:            [{ id, text, time }]  already sent notices
@@ -28,6 +28,81 @@ const demoStudents = Array.from({ length: 9 }, (_, i) => ({
   name: `Student ${i + 1}`,
   online: i !== 4,
 }));
+
+const blankQuestion = () => ({
+  question: "",
+  options: ["", "", "", ""],
+  answer: 0,
+});
+
+const demoQuestions = [
+  {
+    question: "Which data structure follows the Last In, First Out (LIFO) principle?",
+    options: ["Queue", "Stack", "Linked list", "Heap"],
+    answer: 1,
+  },
+  {
+    question: "What is the worst-case time complexity of binary search on a sorted array?",
+    options: ["O(1)", "O(log n)", "O(n)", "O(n log n)"],
+    answer: 1,
+  },
+  {
+    question: "Which key uniquely identifies a row in a relational database table?",
+    options: ["Foreign key", "Candidate value", "Primary key", "Index key"],
+    answer: 2,
+  },
+  {
+    question: "Which OSI model layer is responsible for routing packets between networks?",
+    options: ["Data Link", "Network", "Transport", "Session"],
+    answer: 1,
+  },
+  {
+    question: "Which scheduling algorithm gives each process a fixed time slice?",
+    options: ["First Come, First Served", "Shortest Job First", "Priority Scheduling", "Round Robin"],
+    answer: 3,
+  },
+  {
+    question: "Which traversal of a binary search tree visits keys in sorted order?",
+    options: ["Preorder", "Inorder", "Postorder", "Level order"],
+    answer: 1,
+  },
+  {
+    question: "Which normal form eliminates partial dependency on a composite key?",
+    options: ["First Normal Form (1NF)", "Second Normal Form (2NF)", "Third Normal Form (3NF)", "Boyce-Codd Normal Form (BCNF)"],
+    answer: 1,
+  },
+  {
+    question: "What is the main purpose of a compiler?",
+    options: [
+      "Translate source code into a lower-level or machine-readable form",
+      "Store application data permanently",
+      "Route requests across a network",
+      "Schedule CPU processes",
+    ],
+    answer: 0,
+  },
+  {
+    question: "Which protocol provides reliable, connection-oriented data delivery?",
+    options: ["IP", "UDP", "TCP", "ARP"],
+    answer: 2,
+  },
+  {
+    question: "In a max-heap, where is the largest element always located?",
+    options: ["At the root", "At the leftmost leaf", "At the rightmost leaf", "At any leaf"],
+    answer: 0,
+  },
+];
+
+const optionLabel = (index) => {
+  let label = "";
+  let value = index + 1;
+  while (value > 0) {
+    value -= 1;
+    label = String.fromCharCode(65 + (value % 26)) + label;
+    value = Math.floor(value / 26);
+  }
+  return label;
+};
 
 export default function TeacherWaitingRoom({
   students: providedStudents,
@@ -51,6 +126,9 @@ export default function TeacherWaitingRoom({
   const [camError, setCamError] = useState(false);
   const [notice, setNotice] = useState("");
   const [draft, setDraft] = useState("");
+  const [questionDialog, setQuestionDialog] = useState(null);
+  const [draftQuestions, setDraftQuestions] = useState([]);
+  const [questionError, setQuestionError] = useState("");
   const {
     data: room,
     isLoading,
@@ -60,7 +138,8 @@ export default function TeacherWaitingRoom({
     enabled: !!user?.email && !!roomId,
     queryFn: async () =>
       (await axiosSecure.get(`/rooms/${encodeURIComponent(roomId)}`)).data,
-    refetchInterval: 1500,
+    refetchInterval: (query) =>
+      query.state.data?.status === "completed" ? false : 1500,
     refetchIntervalInBackground: true,
   });
   const refreshRoom = () =>
@@ -68,6 +147,19 @@ export default function TeacherWaitingRoom({
   const startExam = useMutation({
     mutationFn: () => axiosSecure.post(`/rooms/${roomId}/start`),
     onSuccess: refreshRoom,
+  });
+  const saveQuestions = useMutation({
+    mutationFn: (questions) =>
+      axiosSecure.post(`/rooms/${roomId}/questions`, { questions }),
+    onSuccess: () => {
+      refreshRoom();
+      setQuestionDialog(null);
+      setQuestionError("");
+    },
+    onError: (error) =>
+      setQuestionError(
+        error.response?.data?.error || "Questions could not be saved.",
+      ),
   });
   const sendNotice = useMutation({
     mutationFn: (text) => axiosSecure.post(`/rooms/${roomId}/notice`, { text }),
@@ -113,8 +205,85 @@ export default function TeacherWaitingRoom({
   const notices = providedNotices ?? liveNotices;
   const messages = providedMessages ?? liveMessages;
   const chatEnabled = providedChatEnabled ?? room?.chatEnabled !== false;
-  const questionsSubmitted = providedQuestionsSubmitted ?? Boolean(room);
+  const questionCount = room?.questions?.length || 0;
+  const questionsSubmitted = providedQuestionsSubmitted ?? questionCount > 0;
   const examStarted = room?.status === "in-progress";
+  const examEnded = room?.status === "completed";
+
+  const openQuestionDialog = () => {
+    const savedQuestions = (room?.questions || []).map((item) => ({
+      question: item.question || item.q || "",
+      options: [...(item.options || item.choices || ["", "", "", ""])],
+      answer: Number.isInteger(item.answer) ? item.answer : 0,
+    }));
+    setDraftQuestions(savedQuestions.length ? savedQuestions : [blankQuestion()]);
+    setQuestionError("");
+    setQuestionDialog("choose");
+  };
+
+  const fillDemoQuestions = () => {
+    setDraftQuestions(demoQuestions.map((question) => ({
+      ...question,
+      options: [...question.options],
+    })));
+    setQuestionError("");
+    setQuestionDialog("create");
+  };
+
+  const updateQuestion = (questionIndex, update) => {
+    setDraftQuestions((current) =>
+      current.map((question, index) =>
+        index === questionIndex ? { ...question, ...update } : question,
+      ),
+    );
+  };
+
+  const addQuestion = () =>
+    setDraftQuestions((current) => [...current, blankQuestion()]);
+
+  const addOption = (questionIndex) =>
+    setDraftQuestions((current) =>
+      current.map((question, index) =>
+        index === questionIndex
+          ? { ...question, options: [...question.options, ""] }
+          : question,
+      ),
+    );
+
+  const removeOption = (questionIndex, optionIndex) =>
+    setDraftQuestions((current) =>
+      current.map((question, index) => {
+        if (index !== questionIndex || question.options.length <= 2) {
+          return question;
+        }
+        const options = question.options.filter((_, i) => i !== optionIndex);
+        const answer =
+          question.answer === optionIndex
+            ? Math.min(optionIndex, options.length - 1)
+            : question.answer > optionIndex
+              ? question.answer - 1
+              : question.answer;
+        return { ...question, options, answer };
+      }),
+    );
+
+  const submitQuestions = (event) => {
+    event.preventDefault();
+    setQuestionError("");
+    saveQuestions.mutate(
+      draftQuestions.map((question) => ({
+        question: question.question.trim(),
+        options: question.options.map((option) => option.trim()),
+        answer: question.answer,
+      })),
+    );
+  };
+
+  const handleStartExam = () => {
+    if (!window.confirm("Are you sure you want to start this exam now?")) return;
+    if (onStartExam) onStartExam();
+    else startExam.mutate();
+  };
 
   useEffect(() => {
     let stream;
@@ -215,30 +384,47 @@ export default function TeacherWaitingRoom({
         <aside className="twr-side">
           {/* Exam controls */}
           <section className="twr-card twr-controls">
-            <button
-              className="twr-secondary"
-              onClick={onAddQuestion || (() => {})}
-            >
-              Add question
-            </button>
+            <div className="twr-control-actions">
+              <button
+                className="twr-secondary"
+                onClick={onAddQuestion || openQuestionDialog}
+                disabled={examStarted || examEnded}
+              >
+                Add question
+              </button>
+              <button
+                className="twr-secondary"
+                onClick={fillDemoQuestions}
+                disabled={examStarted || examEnded}
+              >
+                Demo questions
+              </button>
+            </div>
             <button
               className="twr-primary"
-              onClick={onStartExam || (() => startExam.mutate())}
+              onClick={handleStartExam}
               disabled={
-                !questionsSubmitted || startExam.isPending || examStarted
+                !questionsSubmitted ||
+                startExam.isPending ||
+                examStarted ||
+                examEnded
               }
             >
-              {examStarted
+              {examEnded
+                ? "Exam ended"
+                : examStarted
                 ? "Exam started"
                 : startExam.isPending
                   ? "Starting..."
                   : "Start exam"}
             </button>
             <p className={`twr-muted ${questionsSubmitted ? "ok" : ""}`}>
-              {examStarted
+              {examEnded
+                ? "Exam time is over. Students have been removed from the room."
+                : examStarted
                 ? "All students have been sent to the exam."
                 : questionsSubmitted
-                  ? "Ready. Start when all students have joined."
+                  ? `${questionCount} question${questionCount === 1 ? "" : "s"} ready. Start when all students have joined.`
                   : "Submit your questions to enable Start exam."}
             </p>
             {startExam.isError && (
@@ -376,6 +562,184 @@ export default function TeacherWaitingRoom({
           </section>
         </aside>
       </div>
+
+      {questionDialog && (
+        <div
+          className="twr-modal-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setQuestionDialog(null);
+              setQuestionError("");
+            }
+          }}
+        >
+          <section
+            className="twr-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="twr-question-title"
+          >
+            <header className="twr-modal-head">
+              <div>
+                <h2 id="twr-question-title">
+                  {questionDialog === "choose"
+                    ? "Add question"
+                    : "Create questions"}
+                </h2>
+                <p>
+                  {questionDialog === "choose"
+                    ? "Choose how you want to add questions."
+                    : "Write your questions, options, and correct answers."}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="twr-modal-close"
+                aria-label="Close"
+                onClick={() => {
+                  setQuestionDialog(null);
+                  setQuestionError("");
+                }}
+              >
+                ×
+              </button>
+            </header>
+
+            {questionDialog === "choose" ? (
+              <div className="twr-question-choices">
+                <button
+                  type="button"
+                  className="twr-question-choice"
+                  onClick={() => setQuestionDialog("create")}
+                >
+                  <strong>Create Question</strong>
+                  <span>Create questions and enter options manually.</span>
+                </button>
+                <button
+                  type="button"
+                  className="twr-question-choice locked"
+                  disabled
+                >
+                  <strong>
+                    Upload Question <span className="twr-lock">Locked</span>
+                  </strong>
+                  <span>Premium User · Coming soon</span>
+                </button>
+              </div>
+            ) : (
+              <form className="twr-question-form" onSubmit={submitQuestions}>
+                <div className="twr-question-list">
+                  {draftQuestions.map((question, questionIndex) => (
+                    <fieldset className="twr-question-item" key={questionIndex}>
+                      <legend>Question {questionIndex + 1}</legend>
+                      <label>
+                        Question
+                        <textarea
+                          required
+                          maxLength={2000}
+                          rows={2}
+                          value={question.question}
+                          onChange={(event) =>
+                            updateQuestion(questionIndex, {
+                              question: event.target.value,
+                            })
+                          }
+                          placeholder="Enter your question"
+                        />
+                      </label>
+                      <div className="twr-option-heading">
+                        <span>Options</span>
+                        <button
+                          type="button"
+                          className="twr-text-button"
+                          onClick={() => addOption(questionIndex)}
+                        >
+                          + Add option
+                        </button>
+                      </div>
+                      <div className="twr-option-list">
+                        {question.options.map((option, optionIndex) => (
+                          <label
+                            className="twr-option-row"
+                            key={optionIndex}
+                          >
+                            <span>{optionLabel(optionIndex)}.</span>
+                            <input
+                              required
+                              maxLength={500}
+                              value={option}
+                              onChange={(event) =>
+                                updateQuestion(questionIndex, {
+                                  options: question.options.map((current, i) =>
+                                    i === optionIndex
+                                      ? event.target.value
+                                      : current,
+                                  ),
+                                })
+                              }
+                              placeholder={`Option ${optionLabel(optionIndex)}`}
+                            />
+                            <button
+                              type="button"
+                              className="twr-remove-option"
+                              aria-label={`Remove option ${optionLabel(optionIndex)}`}
+                              disabled={question.options.length <= 2}
+                              onClick={() =>
+                                removeOption(questionIndex, optionIndex)
+                              }
+                            >
+                              ×
+                            </button>
+                          </label>
+                        ))}
+                      </div>
+                      <label className="twr-answer">
+                        Correct answer
+                        <select
+                          value={question.answer}
+                          onChange={(event) =>
+                            updateQuestion(questionIndex, {
+                              answer: Number(event.target.value),
+                            })
+                          }
+                        >
+                          {question.options.map((option, optionIndex) => (
+                            <option key={optionIndex} value={optionIndex}>
+                              {optionLabel(optionIndex)} —{" "}
+                              {option.trim() || `Option ${optionLabel(optionIndex)}`}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </fieldset>
+                  ))}
+                </div>
+                {questionError && (
+                  <p className="twr-error" role="alert">
+                    {questionError}
+                  </p>
+                )}
+                <div className="twr-question-actions">
+                  <button
+                    type="button"
+                    className="twr-secondary"
+                    onClick={addQuestion}
+                  >
+                    + Add questions
+                  </button>
+                  <button
+                    type="submit"
+                    className="twr-primary"
+                    disabled={saveQuestions.isPending}
+                  >
+                    {saveQuestions.isPending ? "Saving..." : "Save questions"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </section>
+        </div>
+      )}
     </div>
   );
 }
@@ -467,10 +831,42 @@ const css = `
 .twr-controls{display:grid;gap:10px}
 .twr-controls .twr-muted{margin:0;text-align:center}
 .twr-controls button{border-radius:12px;font:inherit;font-weight:600;cursor:pointer;padding:11px}
+.twr-control-actions{display:flex;gap:8px}
+.twr-control-actions button{flex:1;min-width:0}
 .twr-secondary{background:#fff;color:var(--ink);border:1px solid var(--line)}
 .twr-secondary:hover{border-color:var(--accent);color:var(--accent)}
 .twr-primary{background:var(--accent);color:#fff;border:0;font-size:1.05rem!important;padding:14px!important}
 .twr-primary:disabled{background:#c5ccd6;cursor:not-allowed}
+.twr-secondary:disabled{opacity:.55;cursor:not-allowed}
+.twr-modal-backdrop{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:20px;background:rgba(15,23,36,.58)}
+.twr-modal{display:flex;flex-direction:column;width:min(680px,100%);max-height:min(90dvh,900px);overflow:hidden;border-radius:20px;background:#fff;box-shadow:0 24px 80px rgba(15,23,36,.25)}
+.twr-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:20px 22px;border-bottom:1px solid var(--line)}
+.twr-modal-head h2{margin:0;font-size:1.1rem}
+.twr-modal-head p{margin:5px 0 0;color:var(--muted);font-size:.85rem}
+.twr-modal-close{border:0;background:transparent;color:var(--muted);font-size:1.6rem;line-height:1;cursor:pointer}
+.twr-question-choices{display:grid;gap:12px;padding:22px}
+.twr-question-choice{display:grid;gap:5px;padding:18px;text-align:left;border:1px solid var(--line);border-radius:14px;background:#fff;color:var(--ink);font:inherit;cursor:pointer}
+.twr-question-choice:hover:not(:disabled){border-color:var(--accent);background:#f7fbfa}
+.twr-question-choice span{color:var(--muted);font-size:.85rem}
+.twr-question-choice.locked{background:#f8fafc;cursor:not-allowed}
+.twr-lock{margin-left:8px;padding:3px 7px;border-radius:999px;background:#e8edf3;color:#667085;font-size:.68rem;text-transform:uppercase}
+.twr-question-form{display:flex;flex-direction:column;min-height:0}
+.twr-question-list{overflow:auto;padding:18px 22px}
+.twr-question-item{display:grid;gap:12px;margin:0 0 16px;padding:16px;border:1px solid var(--line);border-radius:14px}
+.twr-question-item legend{padding:0 6px;font-weight:700}
+.twr-question-item label,.twr-answer{display:grid;gap:6px;color:#344054;font-size:.82rem;font-weight:650}
+.twr-question-item textarea,.twr-question-item input,.twr-question-item select{width:100%;min-width:0;border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:#fff;color:var(--ink);font:inherit;font-weight:400}
+.twr-question-item textarea{resize:vertical}
+.twr-option-heading{display:flex;align-items:center;justify-content:space-between;font-size:.82rem;font-weight:650}
+.twr-text-button{border:0;background:transparent;color:var(--accent);font:inherit;font-weight:650;cursor:pointer}
+.twr-option-list{display:grid;gap:8px}
+.twr-option-row{display:flex!important;align-items:center;gap:8px}
+.twr-option-row>span{width:22px;color:var(--muted);text-align:center}
+.twr-option-row input{flex:1}
+.twr-remove-option{width:32px;height:32px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--muted);font-size:1.1rem;cursor:pointer}
+.twr-remove-option:disabled{opacity:.4;cursor:not-allowed}
+.twr-question-actions{display:flex;justify-content:space-between;gap:10px;padding:14px 22px;border-top:1px solid var(--line)}
+.twr-question-actions button{border-radius:10px;font:inherit;font-weight:650;cursor:pointer;padding:10px 14px}
 
 .twr-self{padding:0;position:relative;overflow:hidden;background:#0f1724}
 .twr-self video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
